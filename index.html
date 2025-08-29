@@ -1,9 +1,10 @@
-DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mi Gestor de Gastos</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -19,7 +20,7 @@ DOCTYPE html>
         }
 
         .container {
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -67,6 +68,11 @@ DOCTYPE html>
             color: white;
         }
 
+        .balance-item.investment {
+            background: linear-gradient(135deg, #FF9800, #F57C00);
+            color: white;
+        }
+
         .balance-item.total {
             background: linear-gradient(135deg, #2196F3, #1976D2);
             color: white;
@@ -81,6 +87,43 @@ DOCTYPE html>
         .balance-label {
             font-size: 0.9rem;
             opacity: 0.9;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+
+        .chart-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .chart-tab {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .chart-tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: bold;
         }
 
         .form-card {
@@ -239,6 +282,29 @@ DOCTYPE html>
             .balance-grid {
                 grid-template-columns: 1fr;
             }
+
+            .chart-tabs {
+                flex-wrap: wrap;
+            }
+
+            .chart-tab {
+                flex: 1;
+                min-width: 120px;
+            }
+        }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-select {
+            padding: 8px 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 0.9rem;
         }
     </style>
 </head>
@@ -259,10 +325,25 @@ DOCTYPE html>
                     <div class="balance-amount" id="totalExpense">€0.00</div>
                     <div class="balance-label">Gastos</div>
                 </div>
+                <div class="balance-item investment">
+                    <div class="balance-amount" id="totalInvestment">€0.00</div>
+                    <div class="balance-label">Inversiones</div>
+                </div>
                 <div class="balance-item total">
                     <div class="balance-amount" id="totalBalance">€0.00</div>
                     <div class="balance-label">Balance Total</div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Gráficos -->
+        <div class="chart-card">
+            <div class="chart-tabs">
+                <button class="chart-tab active" onclick="switchChart('monthly')">Por Meses</button>
+                <button class="chart-tab" onclick="switchChart('category')">Por Categorías</button>
+            </div>
+            <div class="chart-container">
+                <canvas id="mainChart"></canvas>
             </div>
         </div>
 
@@ -288,14 +369,26 @@ DOCTYPE html>
                         <label for="category">Categoría</label>
                         <select id="category" required>
                             <option value="">Seleccionar categoría</option>
-                            <option value="alimentacion">Alimentación</option>
-                            <option value="transporte">Transporte</option>
-                            <option value="entretenimiento">Entretenimiento</option>
-                            <option value="salud">Salud</option>
-                            <option value="educacion">Educación</option>
-                            <option value="vivienda">Vivienda</option>
-                            <option value="trabajo">Trabajo</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="investmentPlatformGroup" style="display: none;">
+                        <label for="investmentPlatform">Plataforma</label>
+                        <select id="investmentPlatform">
+                            <option value="">Seleccionar plataforma</option>
+                            <option value="trade-republic">Trade Republic</option>
+                            <option value="myinvestor">MyInvestor</option>
+                            <option value="binance">Binance</option>
                             <option value="otros">Otros</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="investmentTypeGroup" style="display: none;">
+                        <label for="investmentType">Tipo de Inversión</label>
+                        <select id="investmentType">
+                            <option value="">Seleccionar tipo</option>
+                            <option value="bolsa">Bolsa</option>
+                            <option value="etf">ETF</option>
+                            <option value="fondos-indexados">Fondos Indexados</option>
+                            <option value="criptomonedas">Criptomonedas</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -304,16 +397,30 @@ DOCTYPE html>
                     </div>
                 </div>
                 <div class="form-group" style="margin-bottom: 20px;">
-                    <label for="description">Descripción</label>
-                    <input type="text" id="description" placeholder="Ej: Compra en el supermercado" required>
+                    <label for="description">Descripción (opcional)</label>
+                    <input type="text" id="description" placeholder="Ej: Compra en el supermercado">
                 </div>
                 <button type="submit" class="btn">Añadir Transacción</button>
             </form>
         </div>
 
-        <!-- Lista de transacciones -->
+        <!-- Filtros y Lista de transacciones -->
         <div class="transactions-card">
             <h2 style="margin-bottom: 20px; color: #333;">Transacciones Recientes</h2>
+            <div class="filters">
+                <select class="filter-select" id="filterType" onchange="filterTransactions()">
+                    <option value="all">Todos los tipos</option>
+                    <option value="income">Solo ingresos</option>
+                    <option value="expense">Solo gastos</option>
+                    <option value="investment">Solo inversiones</option>
+                </select>
+                <select class="filter-select" id="filterCategory" onchange="filterTransactions()">
+                    <option value="all">Todas las categorías</option>
+                </select>
+                <select class="filter-select" id="filterMonth" onchange="filterTransactions()">
+                    <option value="all">Todos los meses</option>
+                </select>
+            </div>
             <div id="transactionsList">
                 <div class="empty-state">
                     <h3>No hay transacciones todavía</h3>
@@ -326,12 +433,95 @@ DOCTYPE html>
     <script>
         // Variables globales
         let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+        let currentChart = null;
+        let currentChartType = 'monthly';
 
-        // Elementos DOM
+        // Categorías por tipo de transacción
+        const categories = {
+            income: [
+                { value: 'trabajo', label: 'Trabajo' },
+                { value: 'inversiones', label: 'Inversiones' },
+                { value: 'freelance', label: 'Freelance' },
+                { value: 'ventas', label: 'Ventas' },
+                { value: 'alquiler', label: 'Alquiler' },
+                { value: 'prestamo', label: 'Préstamo' },
+                { value: 'regalo', label: 'Regalo' },
+                { value: 'otros', label: 'Otros' }
+            ],
+            expense: [
+                { value: 'alimentacion', label: 'Alimentación' },
+                { value: 'transporte', label: 'Transporte' },
+                { value: 'entretenimiento', label: 'Entretenimiento' },
+                { value: 'salud', label: 'Salud' },
+                { value: 'educacion', label: 'Educación' },
+                { value: 'vivienda', label: 'Vivienda' },
+                { value: 'ropa', label: 'Ropa' },
+                { value: 'tecnologia', label: 'Tecnología' },
+                { value: 'viajes', label: 'Viajes' },
+                { value: 'servicios', label: 'Servicios' },
+                { value: 'seguros', label: 'Seguros' },
+                { value: 'otros', label: 'Otros' }
+            ],
+            investment: [
+                { value: 'trade-republic', label: 'Trade Republic' },
+                { value: 'myinvestor', label: 'MyInvestor' },
+                { value: 'binance', label: 'Binance' },
+                { value: 'otros', label: 'Otros' }
+            ]
+        };
+
+        // Elementos DOM adicionales
+        const typeSelect = document.getElementById('type');
+        const categorySelect = document.getElementById('category');
+        const investmentPlatformGroup = document.getElementById('investmentPlatformGroup');
+        const investmentPlatformSelect = document.getElementById('investmentPlatform');
+        const investmentTypeGroup = document.getElementById('investmentTypeGroup');
+        const investmentTypeSelect = document.getElementById('investmentType');
+
+        // Función para actualizar categorías según el tipo
+        function updateCategories() {
+            const selectedType = typeSelect.value;
+            
+            // Limpiar categorías
+            categorySelect.innerHTML = '<option value="">Seleccionar categoría</option>';
+            
+            if (selectedType && categories[selectedType]) {
+                categories[selectedType].forEach(category => {
+                    categorySelect.innerHTML += `<option value="${category.value}">${category.label}</option>`;
+                });
+            }
+            
+            // Mostrar/ocultar campos de inversión
+            if (selectedType === 'investment') {
+                investmentPlatformGroup.style.display = 'block';
+            } else {
+                investmentPlatformGroup.style.display = 'none';
+                investmentTypeGroup.style.display = 'none';
+                investmentPlatformSelect.value = '';
+                investmentTypeSelect.value = '';
+            }
+        }
+
+        // Función para manejar selección de plataforma de inversión
+        function updateInvestmentType() {
+            const selectedPlatform = investmentPlatformSelect.value;
+            
+            if (selectedPlatform === 'otros') {
+                investmentTypeGroup.style.display = 'block';
+            } else {
+                investmentTypeGroup.style.display = 'none';
+                investmentTypeSelect.value = '';
+            }
+        }
+
+        // Event listeners para cambios de tipo y plataforma
+        typeSelect.addEventListener('change', updateCategories);
+        investmentPlatformSelect.addEventListener('change', updateInvestmentType);
         const form = document.getElementById('transactionForm');
         const transactionsList = document.getElementById('transactionsList');
         const totalIncome = document.getElementById('totalIncome');
         const totalExpense = document.getElementById('totalExpense');
+        const totalInvestment = document.getElementById('totalInvestment');
         const totalBalance = document.getElementById('totalBalance');
         const dateInput = document.getElementById('date');
 
@@ -361,6 +551,35 @@ DOCTYPE html>
             return text.charAt(0).toUpperCase() + text.slice(1);
         }
 
+        // Función para obtener nombre legible de categoría
+        function getCategoryDisplayName(category, type) {
+            if (type === 'investment') {
+                if (category === 'trade-republic') return 'Trade Republic';
+                if (category === 'myinvestor') return 'MyInvestor';
+                if (category === 'binance') return 'Binance';
+                if (category.startsWith('otros-')) {
+                    const investmentType = category.replace('otros-', '');
+                    if (investmentType === 'bolsa') return 'Otros - Bolsa';
+                    if (investmentType === 'etf') return 'Otros - ETF';
+                    if (investmentType === 'fondos-indexados') return 'Otros - Fondos Indexados';
+                    if (investmentType === 'criptomonedas') return 'Otros - Criptomonedas';
+                }
+                if (category === 'otros') return 'Otros';
+            }
+            
+            // Buscar en las categorías normales
+            const allCategories = [...categories.income, ...categories.expense, ...categories.investment];
+            const categoryObj = allCategories.find(cat => cat.value === category);
+            return categoryObj ? categoryObj.label : capitalize(category);
+        }
+
+        // Función para obtener el nombre del mes
+        function getMonthName(date) {
+            const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                           'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            return months[date.getMonth()] + ' ' + date.getFullYear();
+        }
+
         // Función para calcular totales
         function calculateTotals() {
             const income = transactions
@@ -375,34 +594,253 @@ DOCTYPE html>
                 .filter(t => t.type === 'investment')
                 .reduce((sum, t) => sum + t.amount, 0);
 
+            // Balance = ingresos - gastos - inversiones
             const balance = income - expense - investment;
 
             totalIncome.textContent = formatCurrency(income);
-            totalExpense.textContent = formatCurrency(expense + investment);
+            totalExpense.textContent = formatCurrency(expense);
+            totalInvestment.textContent = formatCurrency(investment);
             totalBalance.textContent = formatCurrency(balance);
         }
 
-        // Función para renderizar transacciones
-        function renderTransactions() {
-            if (transactions.length === 0) {
+        // Función para agrupar datos por mes
+        function getMonthlyData() {
+            const monthlyData = {};
+            
+            transactions.forEach(transaction => {
+                const date = new Date(transaction.date);
+                const monthKey = getMonthName(date);
+                
+                if (!monthlyData[monthKey]) {
+                    monthlyData[monthKey] = {
+                        income: 0,
+                        expense: 0,
+                        investment: 0
+                    };
+                }
+                
+                monthlyData[monthKey][transaction.type] += transaction.amount;
+            });
+            
+            return monthlyData;
+        }
+
+        // Función para agrupar datos por categoría
+        function getCategoryData() {
+            const categoryData = {};
+            
+            transactions.forEach(transaction => {
+                const category = capitalize(transaction.category);
+                
+                if (!categoryData[category]) {
+                    categoryData[category] = {
+                        income: 0,
+                        expense: 0,
+                        investment: 0
+                    };
+                }
+                
+                categoryData[category][transaction.type] += transaction.amount;
+            });
+            
+            return categoryData;
+        }
+
+        // Función para crear gráfico mensual
+        function createMonthlyChart() {
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            const monthlyData = getMonthlyData();
+            
+            const labels = Object.keys(monthlyData).sort();
+            const incomeData = labels.map(month => monthlyData[month].income);
+            const expenseData = labels.map(month => monthlyData[month].expense);
+            const investmentData = labels.map(month => monthlyData[month].investment);
+
+            if (currentChart) {
+                currentChart.destroy();
+            }
+
+            currentChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Ingresos',
+                            data: incomeData,
+                            backgroundColor: 'rgba(76, 175, 80, 0.8)',
+                            borderColor: 'rgba(76, 175, 80, 1)',
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Gastos',
+                            data: expenseData,
+                            backgroundColor: 'rgba(244, 67, 54, 0.8)',
+                            borderColor: 'rgba(244, 67, 54, 1)',
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Inversiones',
+                            data: investmentData,
+                            backgroundColor: 'rgba(255, 152, 0, 0.8)',
+                            borderColor: 'rgba(255, 152, 0, 1)',
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Evolución Mensual'
+                        },
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Función para crear gráfico de categorías
+        function createCategoryChart() {
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            const categoryData = getCategoryData();
+            
+            const labels = Object.keys(categoryData);
+            const totalByCategory = labels.map(category => 
+                categoryData[category].expense + categoryData[category].investment
+            );
+
+            if (currentChart) {
+                currentChart.destroy();
+            }
+
+            currentChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: totalByCategory,
+                        backgroundColor: [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+                            '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
+                            '#4BC0C0', '#FF6384', '#36A2EB'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Gastos e Inversiones por Categoría'
+                        },
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Función para cambiar tipo de gráfico
+        function switchChart(type) {
+            currentChartType = type;
+            
+            // Actualizar tabs
+            document.querySelectorAll('.chart-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            if (type === 'monthly') {
+                createMonthlyChart();
+            } else {
+                createCategoryChart();
+            }
+        }
+
+        // Función para actualizar filtros
+        function updateFilters() {
+            const categories = [...new Set(transactions.map(t => getCategoryDisplayName(t.category, t.type)))];
+            const months = [...new Set(transactions.map(t => getMonthName(new Date(t.date))))];
+            
+            // Filtro de categorías
+            const categoryFilter = document.getElementById('filterCategory');
+            categoryFilter.innerHTML = '<option value="all">Todas las categorías</option>';
+            categories.forEach(category => {
+                categoryFilter.innerHTML += `<option value="${category}">${category}</option>`;
+            });
+            
+            // Filtro de meses
+            const monthFilter = document.getElementById('filterMonth');
+            monthFilter.innerHTML = '<option value="all">Todos los meses</option>';
+            months.sort().forEach(month => {
+                monthFilter.innerHTML += `<option value="${month}">${month}</option>`;
+            });
+        }
+
+        // Función para filtrar transacciones
+        function filterTransactions() {
+            const typeFilter = document.getElementById('filterType').value;
+            const categoryFilter = document.getElementById('filterCategory').value;
+            const monthFilter = document.getElementById('filterMonth').value;
+            
+            let filteredTransactions = [...transactions];
+            
+            if (typeFilter !== 'all') {
+                filteredTransactions = filteredTransactions.filter(t => t.type === typeFilter);
+            }
+            
+            if (categoryFilter !== 'all') {
+                filteredTransactions = filteredTransactions.filter(t => 
+                    getCategoryDisplayName(t.category, t.type) === categoryFilter
+                );
+            }
+            
+            if (monthFilter !== 'all') {
+                filteredTransactions = filteredTransactions.filter(t => 
+                    getMonthName(new Date(t.date)) === monthFilter
+                );
+            }
+            
+            renderFilteredTransactions(filteredTransactions);
+        }
+
+        // Función para renderizar transacciones filtradas
+        function renderFilteredTransactions(filteredTransactions) {
+            if (filteredTransactions.length === 0) {
                 transactionsList.innerHTML = `
                     <div class="empty-state">
-                        <h3>No hay transacciones todavía</h3>
-                        <p>Añade tu primera transacción usando el formulario de arriba</p>
+                        <h3>No hay transacciones que coincidan</h3>
+                        <p>Prueba cambiando los filtros</p>
                     </div>
                 `;
                 return;
             }
 
-            // Ordenar por fecha (más reciente primero)
-            const sortedTransactions = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const sortedTransactions = [...filteredTransactions].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-            transactionsList.innerHTML = sortedTransactions.map((transaction, index) => `
+            transactionsList.innerHTML = sortedTransactions.map((transaction) => `
                 <div class="transaction-item">
                     <div class="transaction-info">
                         <div class="transaction-description">${transaction.description}</div>
                         <div class="transaction-details">
-                            ${capitalize(transaction.category)} • ${formatDate(transaction.date)}
+                            ${getCategoryDisplayName(transaction.category, transaction.type)} • ${formatDate(transaction.date)}
                         </div>
                     </div>
                     <div style="display: flex; align-items: center;">
@@ -417,10 +855,25 @@ DOCTYPE html>
             `).join('');
         }
 
+        // Función para renderizar transacciones
+        function renderTransactions() {
+            if (transactions.length === 0) {
+                transactionsList.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No hay transacciones todavía</h3>
+                        <p>Añade tu primera transacción usando el formulario de arriba</p>
+                    </div>
+                `;
+                return;
+            }
+
+            renderFilteredTransactions(transactions);
+        }
+
         // Función para añadir transacción
         function addTransaction(transactionData) {
             const transaction = {
-                id: Date.now(), // ID simple basado en timestamp
+                id: Date.now(),
                 ...transactionData,
                 amount: parseFloat(transactionData.amount)
             };
@@ -430,6 +883,14 @@ DOCTYPE html>
             
             renderTransactions();
             calculateTotals();
+            updateFilters();
+            
+            // Actualizar gráfico
+            if (currentChartType === 'monthly') {
+                createMonthlyChart();
+            } else {
+                createCategoryChart();
+            }
         }
 
         // Función para eliminar transacción
@@ -440,6 +901,17 @@ DOCTYPE html>
                 
                 renderTransactions();
                 calculateTotals();
+                updateFilters();
+                
+                // Actualizar gráfico
+                if (currentChartType === 'monthly') {
+                    createMonthlyChart();
+                } else {
+                    createCategoryChart();
+                }
+                
+                // Actualizar filtros si están aplicados
+                filterTransactions();
             }
         }
 
@@ -447,28 +919,56 @@ DOCTYPE html>
         form.addEventListener('submit', (e) => {
             e.preventDefault();
 
-            const formData = new FormData(form);
+            // Construir categoría completa para inversiones
+            let finalCategory = document.getElementById('category').value;
+            let finalDescription = document.getElementById('description').value || 'Sin descripción';
+            
+            if (document.getElementById('type').value === 'investment') {
+                const platform = investmentPlatformSelect.value;
+                const investmentType = investmentTypeSelect.value;
+                
+                if (platform === 'otros' && investmentType) {
+                    finalCategory = `${platform}-${investmentType}`;
+                    finalDescription = finalDescription === 'Sin descripción' ? 
+                        `Inversión en ${investmentTypeSelect.options[investmentTypeSelect.selectedIndex].text}` : 
+                        finalDescription;
+                } else if (platform) {
+                    finalCategory = platform;
+                    finalDescription = finalDescription === 'Sin descripción' ? 
+                        `Inversión en ${investmentPlatformSelect.options[investmentPlatformSelect.selectedIndex].text}` : 
+                        finalDescription;
+                }
+            }
+
             const transactionData = {
                 type: document.getElementById('type').value,
                 amount: document.getElementById('amount').value,
-                category: document.getElementById('category').value,
+                category: finalCategory,
                 date: document.getElementById('date').value,
-                description: document.getElementById('description').value
+                description: finalDescription
             };
 
             addTransaction(transactionData);
             form.reset();
-            dateInput.valueAsDate = new Date(); // Resetear fecha a hoy
+            dateInput.valueAsDate = new Date(); // Mantener fecha actual
+            
+            // Resetear campos de inversión
+            investmentPlatformGroup.style.display = 'none';
+            investmentTypeGroup.style.display = 'none';
         });
 
         // Inicializar la aplicación
         function init() {
             renderTransactions();
             calculateTotals();
+            updateFilters();
+            createMonthlyChart();
         }
 
-        // Hacer deleteTransaction disponible globalmente
+        // Hacer funciones disponibles globalmente
         window.deleteTransaction = deleteTransaction;
+        window.switchChart = switchChart;
+        window.filterTransactions = filterTransactions;
 
         // Inicializar cuando se carga la página
         init();
