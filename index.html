@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -107,7 +107,7 @@
                     </div>
                     <div class="form-group">
                         <label for="date">Fecha</label>
-                        <input type="date" id="date" required>
+                        <input type="date" id="date">
                     </div>
                 </div>
                 <div class="form-group" style="margin-bottom: 20px;">
@@ -201,6 +201,7 @@
             totalBalance.textContent = formatCurrency(balance);
         }
 
+        // ---- Gráficos (igual que antes, usando filtered) ----
         function createGeneralChart(filtered) {
             const ctx = document.getElementById('generalChart').getContext('2d');
             const income = filtered.filter(t => t.type === 'income').reduce((s,t)=>s+t.amount,0);
@@ -291,9 +292,4 @@
         function addTransaction(data) {
             const transaction = { id: Date.now(), ...data, amount: parseFloat(data.amount) };
             transactions.push(transaction);
-            localStorage.setItem('transactions', JSON.stringify(transactions));
-            renderTransactions(); calculateTotals(); updateCharts();
-        }
-        function deleteTransaction(id) {
-            if
 
