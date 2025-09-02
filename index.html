@@ -23,768 +23,1077 @@
 
     .container {
         max-width: 1200px;
-        margin: 0 auto;
-        padding: 20px;
+        margin: 0 auto;import type { Config } from "tailwindcss";
+
+export default {
+	darkMode: ["class"],
+	content: [
+		"./pages/**/*.{ts,tsx}",
+		"./components/**/*.{ts,tsx}",
+		"./app/**/*.{ts,tsx}",
+		"./src/**/*.{ts,tsx}",
+	],
+	prefix: "",
+	theme: {
+		container: {
+			center: true,
+			padding: '2rem',
+			screens: {
+				'2xl': '1400px'
+			}
+		},
+		extend: {
+			colors: {
+				border: 'hsl(var(--border))',
+				input: 'hsl(var(--input))',
+				ring: 'hsl(var(--ring))',
+				background: 'hsl(var(--background))',
+				foreground: 'hsl(var(--foreground))',
+				primary: {
+					DEFAULT: 'hsl(var(--primary))',
+					foreground: 'hsl(var(--primary-foreground))'
+				},
+				secondary: {
+					DEFAULT: 'hsl(var(--secondary))',
+					foreground: 'hsl(var(--secondary-foreground))'
+				},
+				destructive: {
+					DEFAULT: 'hsl(var(--destructive))',
+					foreground: 'hsl(var(--destructive-foreground))'
+				},
+				muted: {
+					DEFAULT: 'hsl(var(--muted))',
+					foreground: 'hsl(var(--muted-foreground))'
+				},
+				accent: {
+					DEFAULT: 'hsl(var(--accent))',
+					foreground: 'hsl(var(--accent-foreground))'
+				},
+				popover: {
+					DEFAULT: 'hsl(var(--popover))',
+					foreground: 'hsl(var(--popover-foreground))'
+				},
+				card: {
+					DEFAULT: 'hsl(var(--card))',
+					foreground: 'hsl(var(--card-foreground))'
+				},
+				income: {
+					DEFAULT: 'hsl(var(--income))',
+					foreground: 'hsl(var(--income-foreground))',
+					light: 'hsl(var(--income-light))',
+					dark: 'hsl(var(--income-dark))'
+				},
+				expense: {
+					DEFAULT: 'hsl(var(--expense))',
+					foreground: 'hsl(var(--expense-foreground))',
+					light: 'hsl(var(--expense-light))',
+					dark: 'hsl(var(--expense-dark))'
+				},
+				investment: {
+					DEFAULT: 'hsl(var(--investment))',
+					foreground: 'hsl(var(--investment-foreground))',
+					light: 'hsl(var(--investment-light))',
+					dark: 'hsl(var(--investment-dark))'
+				},
+				sidebar: {
+					DEFAULT: 'hsl(var(--sidebar-background))',
+					foreground: 'hsl(var(--sidebar-foreground))',
+					primary: 'hsl(var(--sidebar-primary))',
+					'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
+					accent: 'hsl(var(--sidebar-accent))',
+					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
+					border: 'hsl(var(--sidebar-border))',
+					ring: 'hsl(var(--sidebar-ring))'
+				}
+			},
+			borderRadius: {
+				lg: 'var(--radius)',
+				md: 'calc(var(--radius) - 2px)',
+				sm: 'calc(var(--radius) - 4px)'
+			},
+			keyframes: {
+				'accordion-down': {
+					from: {
+						height: '0'
+					},
+					to: {
+						height: 'var(--radix-accordion-content-height)'
+					}
+				},
+				'accordion-up': {
+					from: {
+						height: 'var(--radix-accordion-content-height)'
+					},
+					to: {
+						height: '0'
+					}
+				}
+			},
+			animation: {
+				'accordion-down': 'accordion-down 0.2s ease-out',
+				'accordion-up': 'accordion-up 0.2s ease-out'
+			}
+		}
+	},
+	plugins: [require("tailwindcss-animate")],
+} satisfies Config;export interface Transaction {
+  id: string;
+  type: 'income' | 'expense' | 'investment';
+  amount: number;
+  category: string;
+  description: string;
+  date: string;
+  createdAt: string;
+}
+
+export interface TransactionSummary {
+  totalIncome: number;
+  totalExpenses: number;
+  totalInvestments: number;
+  balance: number;
+  monthlyIncome: number;
+  monthlyExpenses: number;
+  monthlyInvestments: number;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  type: 'income' | 'expense' | 'investment';
+  icon: string;
+  color: string;
+}
+import { useState, useEffect } from 'react';
+import { Transaction, TransactionSummary } from '@/types/transaction';
+
+const STORAGE_KEY = 'visual-ledger-transactions';
+
+export const useTransactions = () => {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      try {
+        setTransactions(JSON.parse(stored));
+      } catch (error) {
+        console.error('Error loading transactions:', error);
+      }
     }
+  }, []);
 
-    .header {
-        text-align: center;
-        margin-bottom: 40px;
-    }
+  const saveTransactions = (newTransactions: Transaction[]) => {
+    setTransactions(newTransactions);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newTransactions));
+  };
 
-    .header h1 {
-        color: white;
-        font-size: 2.5rem;
-        margin-bottom: 10px;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    }
-
-    .balance-card {
-        background: white;
-        border-radius: 20px;
-        padding: 30px;
-        margin-bottom: 30px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    }
-
-    .balance-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 20px;
-        margin-bottom: 20px;
-    }
-
-    .balance-item {
-        text-align: center;
-        padding: 20px;
-        border-radius: 15px;
-    }
-
-    .balance-item.income {
-        background: linear-gradient(135deg, #4CAF50, #45a049);
-        color: white;
-    }
-
-    .balance-item.expense {
-        background: linear-gradient(135deg, #f44336, #da190b);
-        color: white;
-    }
-
-    .balance-item.investment {
-        background: linear-gradient(135deg, #FF9800, #F57C00);
-        color: white;
-    }
-
-    .balance-item.total {
-        background: linear-gradient(135deg, #2196F3, #1976D2);
-        color: white;
-    }
-
-    .balance-amount {
-        font-size: 1.8rem;
-        font-weight: bold;
-        margin-bottom: 5px;
-    }
-
-    .balance-label {
-        font-size: 0.9rem;
-        opacity: 0.9;
-    }
-
-    .charts-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 30px;
-        margin-bottom: 30px;
-    }
-
-    .chart-card {
-        background: white;
-        border-radius: 20px;
-        padding: 30px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    }
-
-    .chart-card h3 {
-        text-align: center;
-        margin-bottom: 20px;
-        color: #333;
-        font-size: 1.3rem;
-    }
-
-    .chart-container {
-        position: relative;
-        height: 300px;
-        width: 100%;
-    }
-
-    .form-card {
-        background: white;
-        border-radius: 20px;
-        padding: 30px;
-        margin-bottom: 30px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    }
-
-    .form-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 20px;
-        margin-bottom: 20px;
-    }
-
-    .form-group {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .form-group label {
-        margin-bottom: 8px;
-        font-weight: 600;
-        color: #555;
-    }
-
-    .form-group input, .form-group select {
-        padding: 12px;
-        border: 2px solid #e1e5e9;
-        border-radius: 10px;
-        font-size: 1rem;
-        transition: all 0.3s ease;
-    }
-
-    .form-group input:focus, .form-group select:focus {
-        outline: none;
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-    }
-
-    .btn {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
-        border: none;
-        padding: 15px 30px;
-        border-radius: 10px;
-        font-size: 1rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        width: 100%;
-    }
-
-    .btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-    }
-
-    .transactions-section {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-        gap: 30px;
-    }
-
-    .transactions-card {
-        background: white;
-        border-radius: 20px;
-        padding: 30px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    }
-
-    .transactions-card h2 {
-        margin-bottom: 20px;
-        color: #333;
-        text-align: center;
-    }
-
-    .transactions-card.income h2 {
-        color: #4CAF50;
-    }
-
-    .transactions-card.expense h2 {
-        color: #f44336;
-    }
-
-    .transactions-card.investment h2 {
-        color: #FF9800;
-    }
-
-    .transaction-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 15px;
-        border-bottom: 1px solid #f0f0f0;
-        transition: background 0.3s ease;
-    }
-
-    .transaction-item:hover {
-        background: #f8f9fa;
-    }
-
-    .transaction-item:last-child {
-        border-bottom: none;
-    }
-
-    .transaction-info {
-        flex-grow: 1;
-    }
-
-    .transaction-description {
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 5px;
-    }
-
-    .transaction-details {
-        font-size: 0.9rem;
-        color: #666;
-    }
-
-    .transaction-amount {
-        font-weight: bold;
-        font-size: 1.1rem;
-    }
-
-    .transaction-amount.income {
-        color: #4CAF50;
-    }
-
-    .transaction-amount.expense {
-        color: #f44336;
-    }
-
-    .transaction-amount.investment {
-        color: #FF9800;
-    }
-
-    .delete-btn {
-        background: #f44336;
-        color: white;
-        border: none;
-        padding: 5px 10px;
-        border-radius: 5px;
-        cursor: pointer;
-        margin-left: 10px;
-        font-size: 0.8rem;
-    }
-
-    .delete-btn:hover {
-        background: #da190b;
-    }
-
-    .empty-state {
-        text-align: center;
-        padding: 40px;
-        color: #666;
-    }
-
-    .empty-state h3 {
-        margin-bottom: 10px;
-        color: #999;
-    }
-
-    @media (max-width: 768px) {
-        .container {
-            padding: 10px;
-        }
-        
-        .header h1 {
-            font-size: 2rem;
-        }
-        
-        .form-grid {
-            grid-template-columns: 1fr;
-        }
-        
-        .balance-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .charts-container {
-            grid-template-columns: 1fr;
-        }
-
-        .transactions-section {
-            grid-template-columns: 1fr;
-        }
-
-        .chart-container {
-            height: 250px;
-        }
-    }
-</style>
-```
-
-</head>
-<body>
-    <div class="container">
-        <header class="header">
-            <h1>💰 Mi Gestor de Gastos</h1>
-        </header>
-
-```
-    <!-- Resumen de balance -->
-    <div class="balance-card">
-        <div class="balance-grid">
-            <div class="balance-item income">
-                <div class="balance-amount" id="totalIncome">€0.00</div>
-                <div class="balance-label">Ingresos</div>
-            </div>
-            <div class="balance-item expense">
-                <div class="balance-amount" id="totalExpense">€0.00</div>
-                <div class="balance-label">Gastos</div>
-            </div>
-            <div class="balance-item investment">
-                <div class="balance-amount" id="totalInvestment">€0.00</div>
-                <div class="balance-label">Inversiones</div>
-            </div>
-            <div class="balance-item total">
-                <div class="balance-amount" id="totalBalance">€0.00</div>
-                <div class="balance-label">Balance Total</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Gráficos -->
-    <div class="charts-container">
-        <div class="chart-card">
-            <h3>📊 Resumen General</h3>
-            <div class="chart-container">
-                <canvas id="generalChart"></canvas>
-            </div>
-        </div>
-        <div class="chart-card">
-            <h3>💸 Gastos por Categoría</h3>
-            <div class="chart-container">
-                <canvas id="expenseChart"></canvas>
-            </div>
-        </div>
-        <div class="chart-card">
-            <h3>📈 Inversiones por Categoría</h3>
-            <div class="chart-container">
-                <canvas id="investmentChart"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <!-- Formulario -->
-    <div class="form-card">
-        <h2 style="margin-bottom: 20px; color: #333;">Añadir Transacción</h2>
-        <form id="transactionForm">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="type">Tipo</label>
-                    <select id="type" required>
-                        <option value="">Seleccionar tipo</option>
-                        <option value="income">Ingreso</option>
-                        <option value="expense">Gasto</option>
-                        <option value="investment">Inversión</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="amount">Cantidad (€)</label>
-                    <input type="number" id="amount" step="0.01" min="0" required>
-                </div>
-                <div class="form-group">
-                    <label for="category">Categoría</label>
-                    <select id="category" required>
-                        <option value="">Seleccionar categoría</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="date">Fecha</label>
-                    <input type="date" id="date" required>
-                </div>
-            </div>
-            <div class="form-group" style="margin-bottom: 20px;">
-                <label for="description">Descripción</label>
-                <input type="text" id="description" placeholder="Ej: Compra en el supermercado" required>
-            </div>
-            <button type="submit" class="btn">Añadir Transacción</button>
-        </form>
-    </div>
-
-    <!-- Lista de transacciones separadas -->
-    <div class="transactions-section">
-        <div class="transactions-card income">
-            <h2>💰 Ingresos</h2>
-            <div id="incomeList">
-                <div class="empty-state">
-                    <h3>No hay ingresos todavía</h3>
-                    <p>Añade tus primeros ingresos</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="transactions-card expense">
-            <h2>💸 Gastos</h2>
-            <div id="expenseList">
-                <div class="empty-state">
-                    <h3>No hay gastos todavía</h3>
-                    <p>Añade tus primeros gastos</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="transactions-card investment">
-            <h2>📈 Inversiones</h2>
-            <div id="investmentList">
-                <div class="empty-state">
-                    <h3>No hay inversiones todavía</h3>
-                    <p>Añade tus primeras inversiones</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    // Variables globales
-    let transactions = [];
-    let charts = {};
-
-    // Categorías por tipo
-    const categories = {
-        income: [
-            { value: 'nomina', label: 'Nómina' },
-            { value: 'cta', label: 'CTA' }
-        ],
-        expense: [
-            { value: 'alimentacion', label: 'Alimentación' },
-            { value: 'transporte', label: 'Transporte' },
-            { value: 'entretenimiento', label: 'Entretenimiento' },
-            { value: 'salud', label: 'Salud' },
-            { value: 'educacion', label: 'Educación' },
-            { value: 'vivienda', label: 'Vivienda' },
-            { value: 'ropa', label: 'Ropa' },
-            { value: 'servicios', label: 'Servicios' },
-            { value: 'otros', label: 'Otros' }
-        ],
-        investment: [
-            { value: 'acciones', label: 'Acciones' },
-            { value: 'criptomonedas', label: 'Criptomonedas' },
-            { value: 'fondos', label: 'Fondos de Inversión' },
-            { value: 'bonos', label: 'Bonos' },
-            { value: 'inmobiliario', label: 'Inmobiliario' },
-            { value: 'commodities', label: 'Commodities' },
-            { value: 'otros_inv', label: 'Otras Inversiones' }
-        ]
+  const addTransaction = (transaction: Omit<Transaction, 'id' | 'createdAt'>) => {
+    const newTransaction: Transaction = {
+      ...transaction,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString(),
     };
+    saveTransactions([newTransaction, ...transactions]);
+  };
 
-    // Elementos DOM
-    const form = document.getElementById('transactionForm');
-    const typeSelect = document.getElementById('type');
-    const categorySelect = document.getElementById('category');
-    const dateInput = document.getElementById('date');
+  const deleteTransaction = (id: string) => {
+    saveTransactions(transactions.filter(t => t.id !== id));
+  };
 
-    // Elementos de balance
-    const totalIncome = document.getElementById('totalIncome');
-    const totalExpense = document.getElementById('totalExpense');
-    const totalInvestment = document.getElementById('totalInvestment');
-    const totalBalance = document.getElementById('totalBalance');
+  const updateTransaction = (id: string, updates: Partial<Transaction>) => {
+    saveTransactions(
+      transactions.map(t => t.id === id ? { ...t, ...updates } : t)
+    );
+  };
 
-    // Listas de transacciones
-    const incomeList = document.getElementById('incomeList');
-    const expenseList = document.getElementById('expenseList');
-    const investmentList = document.getElementById('investmentList');
+  const getSummary = (): TransactionSummary => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
 
-    // Inicializar fecha actual
-    const today = new Date();
-    const todayString = today.getFullYear() + '-' + 
-        String(today.getMonth() + 1).padStart(2, '0') + '-' + 
-        String(today.getDate()).padStart(2, '0');
-    dateInput.value = todayString;
-
-    // Actualizar categorías según el tipo
-    typeSelect.addEventListener('change', function() {
-        const selectedType = this.value;
-        categorySelect.innerHTML = '<option value="">Seleccionar categoría</option>';
+    const totals = transactions.reduce(
+      (acc, transaction) => {
+        const amount = transaction.amount;
         
-        if (selectedType && categories[selectedType]) {
-            categories[selectedType].forEach(category => {
-                const option = document.createElement('option');
-                option.value = category.value;
-                option.textContent = category.label;
-                categorySelect.appendChild(option);
-            });
+        if (transaction.type === 'income') {
+          acc.totalIncome += amount;
+        } else if (transaction.type === 'expense') {
+          acc.totalExpenses += amount;
+        } else if (transaction.type === 'investment') {
+          acc.totalInvestments += amount;
         }
+
+        // Monthly calculations
+        const transactionDate = new Date(transaction.date);
+        if (
+          transactionDate.getMonth() === currentMonth &&
+          transactionDate.getFullYear() === currentYear
+        ) {
+          if (transaction.type === 'income') {
+            acc.monthlyIncome += amount;
+          } else if (transaction.type === 'expense') {
+            acc.monthlyExpenses += amount;
+          } else if (transaction.type === 'investment') {
+            acc.monthlyInvestments += amount;
+          }
+        }
+
+        return acc;
+      },
+      {
+        totalIncome: 0,
+        totalExpenses: 0,
+        totalInvestments: 0,
+        monthlyIncome: 0,
+        monthlyExpenses: 0,
+        monthlyInvestments: 0,
+      }
+    );
+
+    return {
+      ...totals,
+      balance: totals.totalIncome - totals.totalExpenses - totals.totalInvestments,
+    };
+  };
+
+  return {
+    transactions,
+    addTransaction,
+    deleteTransaction,
+    updateTransaction,
+    getSummary,
+  };
+};import { Category } from '@/types/transaction';
+
+export const categories: Category[] = [
+  // Income categories
+  {
+    id: 'salary',
+    name: 'Salario',
+    type: 'income',
+    icon: '💼',
+    color: 'hsl(var(--income))'
+  },
+  {
+    id: 'freelance',
+    name: 'Freelance',
+    type: 'income',
+    icon: '💻',
+    color: 'hsl(var(--income))'
+  },
+  {
+    id: 'business',
+    name: 'Negocio',
+    type: 'income',
+    icon: '🏢',
+    color: 'hsl(var(--income))'
+  },
+  {
+    id: 'passive',
+    name: 'Ingresos Pasivos',
+    type: 'income',
+    icon: '💰',
+    color: 'hsl(var(--income))'
+  },
+
+  // Expense categories
+  {
+    id: 'food',
+    name: 'Comida',
+    type: 'expense',
+    icon: '🍽️',
+    color: 'hsl(var(--expense))'
+  },
+  {
+    id: 'transport',
+    name: 'Transporte',
+    type: 'expense',
+    icon: '🚗',
+    color: 'hsl(var(--expense))'
+  },
+  {
+    id: 'housing',
+    name: 'Vivienda',
+    type: 'expense',
+    icon: '🏠',
+    color: 'hsl(var(--expense))'
+  },
+  {
+    id: 'entertainment',
+    name: 'Entretenimiento',
+    type: 'expense',
+    icon: '🎬',
+    color: 'hsl(var(--expense))'
+  },
+  {
+    id: 'healthcare',
+    name: 'Salud',
+    type: 'expense',
+    icon: '🏥',
+    color: 'hsl(var(--expense))'
+  },
+  {
+    id: 'shopping',
+    name: 'Compras',
+    type: 'expense',
+    icon: '🛍️',
+    color: 'hsl(var(--expense))'
+  },
+  {
+    id: 'education',
+    name: 'Educación',
+    type: 'expense',
+    icon: '📚',
+    color: 'hsl(var(--expense))'
+  },
+
+  // Investment categories
+  {
+    id: 'stocks',
+    name: 'Acciones',
+    type: 'investment',
+    icon: '📈',
+    color: 'hsl(var(--investment))'
+  },
+  {
+    id: 'crypto',
+    name: 'Criptomonedas',
+    type: 'investment',
+    icon: '₿',
+    color: 'hsl(var(--investment))'
+  },
+  {
+    id: 'real-estate',
+    name: 'Bienes Raíces',
+    type: 'investment',
+    icon: '🏘️',
+    color: 'hsl(var(--investment))'
+  },
+  {
+    id: 'savings',
+    name: 'Ahorros',
+    type: 'investment',
+    icon: '🏦',
+    color: 'hsl(var(--investment))'
+  },
+  {
+    id: 'bonds',
+    name: 'Bonos',
+    type: 'investment',
+    icon: '📊',
+    color: 'hsl(var(--investment))'
+  }
+];
+import { useState } from 'react';
+import { Navigation } from '@/components/Navigation';
+import { Dashboard } from '@/components/Dashboard';
+import { TransactionForm } from '@/components/TransactionForm';
+import { TransactionList } from '@/components/TransactionList';
+import { useTransactions } from '@/hooks/useTransactions';
+
+const Index = () => {
+  const [activeSection, setActiveSection] = useState<'dashboard' | 'add' | 'history'>('dashboard');
+  const { transactions, addTransaction, deleteTransaction, getSummary } = useTransactions();
+  const summary = getSummary();
+
+  const renderContent = () => {
+    switch (activeSection) {
+      case 'dashboard':
+        return <Dashboard summary={summary} transactions={transactions} />;
+      case 'add':
+        return (
+          <div className="flex justify-center">
+            <TransactionForm onSubmit={addTransaction} />
+          </div>
+        );
+      case 'history':
+        return <TransactionList transactions={transactions} onDelete={deleteTransaction} />;
+      default:
+        return <Dashboard summary={summary} transactions={transactions} />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navigation activeSection={activeSection} onSectionChange={setActiveSection} />
+      <main className="container mx-auto px-4 py-6">
+        {renderContent()}
+      </main>
+    </div>
+  );
+};
+
+export default Index;
+import { Button } from '@/components/ui/button';
+import { PlusCircle, BarChart3, Wallet } from 'lucide-react';
+
+interface NavigationProps {
+  activeSection: 'dashboard' | 'add' | 'history';
+  onSectionChange: (section: 'dashboard' | 'add' | 'history') => void;
+}
+
+export const Navigation = ({ activeSection, onSectionChange }: NavigationProps) => {
+  const navItems = [
+    {
+      id: 'dashboard' as const,
+      label: 'Dashboard',
+      icon: BarChart3,
+    },
+    {
+      id: 'add' as const,
+      label: 'Agregar',
+      icon: PlusCircle,
+    },
+    {
+      id: 'history' as const,
+      label: 'Historial',
+      icon: Wallet,
+    },
+  ];
+
+  return (
+    <nav className="bg-card border-b border-border">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          <div className="flex items-center space-x-2">
+            <div className="text-2xl">💰</div>
+            <h1 className="text-xl font-bold bg-gradient-to-r from-income to-investment bg-clip-text text-transparent">
+              Visual Ledger
+            </h1>
+          </div>
+          
+          <div className="flex space-x-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeSection === item.id;
+              
+              return (
+                <Button
+                  key={item.id}
+                  variant={isActive ? 'default' : 'ghost'}
+                  onClick={() => onSectionChange(item.id)}
+                  className="flex items-center space-x-2"
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="hidden sm:inline">{item.label}</span>
+                </Button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
+};
+import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+
+interface SummaryCardProps {
+  title: string;
+  amount: number;
+  icon: string;
+  type: 'income' | 'expense' | 'investment' | 'balance';
+  trend?: {
+    value: number;
+    isPositive: boolean;
+  };
+}
+
+export const SummaryCard = ({ title, amount, icon, type, trend }: SummaryCardProps) => {
+  const formatAmount = (value: number) => {
+    return new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: 'EUR',
+    }).format(value);
+  };
+
+  const getCardStyles = () => {
+    switch (type) {
+      case 'income':
+        return 'bg-gradient-to-br from-income to-income-dark border-income/20';
+      case 'expense':
+        return 'bg-gradient-to-br from-expense to-expense-dark border-expense/20';
+      case 'investment':
+        return 'bg-gradient-to-br from-investment to-investment-dark border-investment/20';
+      case 'balance':
+        return amount >= 0 
+          ? 'bg-gradient-to-br from-income to-income-dark border-income/20'
+          : 'bg-gradient-to-br from-expense to-expense-dark border-expense/20';
+      default:
+        return 'bg-card border-border';
+    }
+  };
+
+  return (
+    <Card className={cn("overflow-hidden transition-all duration-300 hover:scale-105", getCardStyles())}>
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-white/80">{title}</p>
+            <p className="text-3xl font-bold text-white">
+              {formatAmount(amount)}
+            </p>
+            {trend && (
+              <div className="flex items-center space-x-1">
+                <span className={cn(
+                  "text-xs px-2 py-1 rounded-full",
+                  trend.isPositive ? "bg-white/20 text-white" : "bg-white/20 text-white"
+                )}>
+                  {trend.isPositive ? '↗' : '↘'} {Math.abs(trend.value)}%
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="text-4xl opacity-80">
+            {icon}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Transaction } from '@/types/transaction';
+import { categories } from '@/data/categories';
+import { useToast } from '@/hooks/use-toast';
+
+interface TransactionFormProps {
+  onSubmit: (transaction: Omit<Transaction, 'id' | 'createdAt'>) => void;
+  defaultType?: 'income' | 'expense' | 'investment';
+}
+
+export const TransactionForm = ({ onSubmit, defaultType = 'expense' }: TransactionFormProps) => {
+  const [type, setType] = useState<'income' | 'expense' | 'investment'>(defaultType);
+  const [amount, setAmount] = useState('');
+  const [category, setCategory] = useState('');
+  const [description, setDescription] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const { toast } = useToast();
+
+  const filteredCategories = categories.filter(cat => cat.type === type);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!amount || !category || !description) {
+      toast({
+        title: 'Error',
+        description: 'Por favor completa todos los campos',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      toast({
+        title: 'Error',
+        description: 'Ingresa un monto válido mayor a 0',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    onSubmit({
+      type,
+      amount: numericAmount,
+      category,
+      description,
+      date,
     });
 
-    // Función para formatear números como moneda
-    function formatCurrency(amount) {
-        return new Intl.NumberFormat('es-ES', {
-            style: 'currency',
-            currency: 'EUR'
-        }).format(amount);
+    // Reset form
+    setAmount('');
+    setCategory('');
+    setDescription('');
+    setDate(new Date().toISOString().split('T')[0]);
+
+    toast({
+      title: 'Transacción agregada',
+      description: `${type === 'income' ? 'Ingreso' : type === 'expense' ? 'Gasto' : 'Inversión'} registrado correctamente`,
+    });
+  };
+
+  const getTypeColor = () => {
+    switch (type) {
+      case 'income': return 'text-income';
+      case 'expense': return 'text-expense';
+      case 'investment': return 'text-investment';
     }
+  };
 
-    // Función para formatear fechas
-    function formatDate(dateString) {
-        const date = new Date(dateString + 'T00:00:00');
-        return date.toLocaleDateString('es-ES', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
+  return (
+    <Card className="w-full max-w-md">
+      <CardHeader>
+        <CardTitle className={`text-center ${getTypeColor()}`}>
+          Nueva Transacción
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="type">Tipo</Label>
+            <Select value={type} onValueChange={(value: 'income' | 'expense' | 'investment') => {
+              setType(value);
+              setCategory('');
+            }}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="income">💰 Ingreso</SelectItem>
+                <SelectItem value="expense">💸 Gasto</SelectItem>
+                <SelectItem value="investment">📈 Inversión</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="amount">Monto (€)</Label>
+            <Input
+              id="amount"
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="category">Categoría</Label>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona una categoría" />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredCategories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.icon} {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Descripción</Label>
+            <Textarea
+              id="description"
+              placeholder="Describe la transacción..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="date">Fecha</Label>
+            <Input
+              id="date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </div>
+
+          <Button type="submit" className="w-full">
+            Agregar Transacción
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+};
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Transaction } from '@/types/transaction';
+import { categories } from '@/data/categories';
+import { Trash2, Calendar, Tag } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface TransactionListProps {
+  transactions: Transaction[];
+  onDelete: (id: string) => void;
+}
+
+export const TransactionList = ({ transactions, onDelete }: TransactionListProps) => {
+  const [filterType, setFilterType] = useState<'all' | 'income' | 'expense' | 'investment'>('all');
+  const [sortBy, setSortBy] = useState<'date' | 'amount'>('date');
+
+  const filteredTransactions = transactions
+    .filter(transaction => filterType === 'all' || transaction.type === filterType)
+    .sort((a, b) => {
+      if (sortBy === 'date') {
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      }
+      return b.amount - a.amount;
+    });
+
+  const getCategoryInfo = (categoryId: string) => {
+    return categories.find(cat => cat.id === categoryId);
+  };
+
+  const formatAmount = (amount: number) => {
+    return new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: 'EUR',
+    }).format(amount);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
+  const getTypeStyles = (type: Transaction['type']) => {
+    switch (type) {
+      case 'income':
+        return 'bg-income/10 text-income border-income/20';
+      case 'expense':
+        return 'bg-expense/10 text-expense border-expense/20';
+      case 'investment':
+        return 'bg-investment/10 text-investment border-investment/20';
     }
+  };
 
-    // Función para obtener el label de la categoría
-    function getCategoryLabel(type, value) {
-        const typeCategories = categories[type];
-        if (!typeCategories) return value;
-        
-        const category = typeCategories.find(cat => cat.value === value);
-        return category ? category.label : value;
+  const getTypeLabel = (type: Transaction['type']) => {
+    switch (type) {
+      case 'income': return 'Ingreso';
+      case 'expense': return 'Gasto';
+      case 'investment': return 'Inversión';
     }
+  };
 
-    // Función para calcular totales
-    function calculateTotals() {
-        const income = transactions
-            .filter(t => t.type === 'income')
-            .reduce((sum, t) => sum + t.amount, 0);
-
-        const expense = transactions
-            .filter(t => t.type === 'expense')
-            .reduce((sum, t) => sum + t.amount, 0);
-
-        const investment = transactions
-            .filter(t => t.type === 'investment')
-            .reduce((sum, t) => sum + t.amount, 0);
-
-        const balance = income - expense - investment;
-
-        totalIncome.textContent = formatCurrency(income);
-        totalExpense.textContent = formatCurrency(expense);
-        totalInvestment.textContent = formatCurrency(investment);
-        totalBalance.textContent = formatCurrency(balance);
-    }
-
-    // Función para crear gráficos
-    function createCharts() {
-        // Destruir gráficos existentes
-        Object.values(charts).forEach(chart => chart.destroy());
-        charts = {};
-
-        // Gráfico general
-        const generalCtx = document.getElementById('generalChart').getContext('2d');
-        const income = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-        const expense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-        const investment = transactions.filter(t => t.type === 'investment').reduce((sum, t) => sum + t.amount, 0);
-
-        if (income > 0 || expense > 0 || investment > 0) {
-            charts.general = new Chart(generalCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Ingresos', 'Gastos', 'Inversiones'],
-                    datasets: [{
-                        data: [income, expense, investment],
-                        backgroundColor: ['#4CAF50', '#f44336', '#FF9800'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
-                    }
-                }
-            });
-        }
-
-        // Gráfico de gastos por categoría
-        const expenseCtx = document.getElementById('expenseChart').getContext('2d');
-        const expensesByCategory = {};
-        transactions.filter(t => t.type === 'expense').forEach(t => {
-            const label = getCategoryLabel('expense', t.category);
-            expensesByCategory[label] = (expensesByCategory[label] || 0) + t.amount;
-        });
-
-        if (Object.keys(expensesByCategory).length > 0) {
-            charts.expense = new Chart(expenseCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(expensesByCategory),
-                    datasets: [{
-                        data: Object.values(expensesByCategory),
-                        backgroundColor: [
-                            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-                            '#DDA0DD', '#98D8C8', '#FFA07A', '#F0E68C', '#B0C4DE'
-                        ],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
-                    }
-                }
-            });
-        }
-
-        // Gráfico de inversiones por categoría
-        const investmentCtx = document.getElementById('investmentChart').getContext('2d');
-        const investmentsByCategory = {};
-        transactions.filter(t => t.type === 'investment').forEach(t => {
-            const label = getCategoryLabel('investment', t.category);
-            investmentsByCategory[label] = (investmentsByCategory[label] || 0) + t.amount;
-        });
-
-        if (Object.keys(investmentsByCategory).length > 0) {
-            charts.investment = new Chart(investmentCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(investmentsByCategory),
-                    datasets: [{
-                        data: Object.values(investmentsByCategory),
-                        backgroundColor: [
-                            '#FF9500', '#FF6B00', '#FF8C42', '#FFA726', '#FFB74D',
-                            '#FFCC02', '#FFD54F', '#FFE082', '#FFECB3', '#FFF3E0'
-                        ],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
-                    }
-                }
-            });
-        }
-    }
-
-    // Función para eliminar transacción
-    function deleteTransaction(id) {
-        if (confirm('¿Estás seguro de que quieres eliminar esta transacción?')) {
-            transactions = transactions.filter(t => t.id !== id);
-            renderTransactions();
-            calculateTotals();
-            createCharts();
-        }
-    }
-
-    // Función para renderizar transacciones por tipo
-    function renderTransactionsByType(type, container) {
-        const typeTransactions = transactions.filter(t => t.type === type);
-        
-        if (typeTransactions.length === 0) {
-            const emptyMessages = {
-                income: 'No hay ingresos todavía',
-                expense: 'No hay gastos todavía',
-                investment: 'No hay inversiones todavía'
-            };
-            
-            container.innerHTML = `
-                <div class="empty-state">
-                    <h3>${emptyMessages[type]}</h3>
-                    <p>Añade tu primer ${type === 'income' ? 'ingreso' : type === 'expense' ? 'gasto' : 'inversión'}</p>
-                </div>
-            `;
-            return;
-        }
-
-        const sortedTransactions = [...typeTransactions].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-        container.innerHTML = sortedTransactions.map((transaction) => `
-            <div class="transaction-item">
-                <div class="transaction-info">
-                    <div class="transaction-description">${transaction.description}</div>
-                    <div class="transaction-details">
-                        ${getCategoryLabel(transaction.type, transaction.category)} • ${formatDate(transaction.date)}
+  return (
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle>Historial de Transacciones</CardTitle>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Select value={filterType} onValueChange={(value: any) => setFilterType(value)}>
+            <SelectTrigger className="w-full sm:w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              <SelectItem value="income">Ingresos</SelectItem>
+              <SelectItem value="expense">Gastos</SelectItem>
+              <SelectItem value="investment">Inversiones</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+            <SelectTrigger className="w-full sm:w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date">Por fecha</SelectItem>
+              <SelectItem value="amount">Por monto</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {filteredTransactions.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No hay transacciones registradas
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredTransactions.map((transaction) => {
+              const categoryInfo = getCategoryInfo(transaction.category);
+              
+              return (
+                <div
+                  key={transaction.id}
+                  className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex items-center space-x-4 flex-1">
+                    <div className="text-2xl">
+                      {categoryInfo?.icon || '💰'}
                     </div>
-                </div>
-                <div style="display: flex; align-items: center;">
-                    <div class="transaction-amount ${transaction.type}">
-                        ${formatCurrency(transaction.amount)}
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-medium truncate">
+                          {transaction.description}
+                        </p>
+                        <Badge className={getTypeStyles(transaction.type)}>
+                          {getTypeLabel(transaction.type)}
+                        </Badge>
+                      </div>
+                      
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Tag className="h-3 w-3" />
+                          <span>{categoryInfo?.name || transaction.category}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>{formatDate(transaction.date)}</span>
+                        </div>
+                      </div>
                     </div>
-                    <button class="delete-btn" onclick="deleteTransaction(${transaction.id})">
-                        🗑️
-                    </button>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "text-lg font-bold",
+                      transaction.type === 'income' && "text-income",
+                      transaction.type === 'expense' && "text-expense",
+                      transaction.type === 'investment' && "text-investment"
+                    )}>
+                      {transaction.type === 'income' ? '+' : '-'}{formatAmount(transaction.amount)}
+                    </div>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDelete(transaction.id)}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+import { SummaryCard } from './SummaryCard';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { TransactionSummary, Transaction } from '@/types/transaction';
+import { categories } from '@/data/categories';
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+
+interface DashboardProps {
+  summary: TransactionSummary;
+  transactions: Transaction[];
+}
+
+export const Dashboard = ({ summary, transactions }: DashboardProps) => {
+  // Data for pie chart (expenses by category)
+  const expensesByCategory = transactions
+    .filter(t => t.type === 'expense')
+    .reduce((acc, transaction) => {
+      const category = categories.find(cat => cat.id === transaction.category);
+      const categoryName = category?.name || transaction.category;
+      acc[categoryName] = (acc[categoryName] || 0) + transaction.amount;
+      return acc;
+    }, {} as Record<string, number>);
+
+  const pieData = Object.entries(expensesByCategory).map(([name, value]) => ({
+    name,
+    value,
+  }));
+
+  // Data for monthly trend
+  const monthlyData = Array.from({ length: 6 }, (_, i) => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - (5 - i));
+    const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+    
+    const monthTransactions = transactions.filter(t => {
+      const transactionDate = new Date(t.date);
+      const transactionMonthKey = `${transactionDate.getFullYear()}-${(transactionDate.getMonth() + 1).toString().padStart(2, '0')}`;
+      return transactionMonthKey === monthKey;
+    });
+
+    const income = monthTransactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    const expenses = monthTransactions
+      .filter(t => t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    const investments = monthTransactions
+      .filter(t => t.type === 'investment')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    return {
+      month: date.toLocaleDateString('es-ES', { month: 'short' }),
+      Ingresos: income,
+      Gastos: expenses,
+      Inversiones: investments,
+    };
+  });
+
+  const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7c7c', '#8dd1e1', '#d084d0'];
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: 'EUR',
+    }).format(value);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <SummaryCard
+          title="Balance Total"
+          amount={summary.balance}
+          icon="💰"
+          type="balance"
+        />
+        <SummaryCard
+          title="Ingresos Totales"
+          amount={summary.totalIncome}
+          icon="💵"
+          type="income"
+        />
+        <SummaryCard
+          title="Gastos Totales"
+          amount={summary.totalExpenses}
+          icon="💸"
+          type="expense"
+        />
+        <SummaryCard
+          title="Inversiones Totales"
+          amount={summary.totalInvestments}
+          icon="📈"
+          type="investment"
+        />
+      </div>
+
+      {/* Monthly Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <SummaryCard
+          title="Ingresos del Mes"
+          amount={summary.monthlyIncome}
+          icon="📅"
+          type="income"
+        />
+        <SummaryCard
+          title="Gastos del Mes"
+          amount={summary.monthlyExpenses}
+          icon="📅"
+          type="expense"
+        />
+        <SummaryCard
+          title="Inversiones del Mes"
+          amount={summary.monthlyInvestments}
+          icon="📅"
+          type="investment"
+        />
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Expenses by Category */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Gastos por Categoría</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {pieData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                No hay datos de gastos para mostrar
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Monthly Trend */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Tendencia Mensual</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                <Legend />
+                <Bar dataKey="Ingresos" fill="hsl(var(--income))" />
+                <Bar dataKey="Gastos" fill="hsl(var(--expense))" />
+                <Bar dataKey="Inversiones" fill="hsl(var(--investment))" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent Transactions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Transacciones Recientes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {transactions.length > 0 ? (
+            <div className="space-y-3">
+              {transactions.slice(0, 5).map((transaction) => {
+                const category = categories.find(cat => cat.id === transaction.category);
+                return (
+                  <div key={transaction.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                    <div className="flex items-center space-x-3">
+                      <div className="text-lg">{category?.icon || '💰'}</div>
+                      <div>
+                        <p className="font-medium">{transaction.description}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {category?.name} • {new Date(transaction.date).toLocaleDateString('es-ES')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className={`font-bold ${
+                      transaction.type === 'income' ? 'text-income' : 
+                      transaction.type === 'expense' ? 'text-expense' : 'text-investment'
+                    }`}>
+                      {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-        `).join('');
-    }
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              No hay transacciones registradas
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
 
-    // Función para renderizar todas las transacciones
-    function renderTransactions() {
-        renderTransactionsByType('income', incomeList);
-        renderTransactionsByType('expense', expenseList);
-        renderTransactionsByType('investment', investmentList);
-    }
 
-    // Función para añadir transacción
-    function addTransaction(transactionData) {
-        const transaction = {
-            id: Date.now(),
-            type: transactionData.type,
-            amount: parseFloat(transactionData.amount),
-            category: transactionData.category,
-            date: transactionData.date,
-            description: transactionData.description
-        };
-
-        transactions.push(transaction);
-        renderTransactions();
-        calculateTotals();
-        createCharts();
-    }
-
-    // Event listener para el formulario
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-
-        const type = document.getElementById('type').value;
-        const amount = document.getElementById('amount').value;
-        const category = document.getElementById('category').value;
-        const date = document.getElementById('date').value;
-        const description = document.getElementById('description').value;
-
-        if (!type || !amount || !category || !date || !description) {
-            alert('Por favor, completa todos los campos');
-            return;
-        }
-
-        const transactionData = {
-            type: type,
-            amount: amount,
-            category: category,
-            date: date,
-            description: description
-        };
-
-        addTransaction(transactionData);
-        
-        form.reset();
-        const today = new Date();
-        const todayString = today.getFullYear() + '-' + 
-            String(today.getMonth() + 1).padStart(2, '0') + '-' + 
-            String(today.getDate()).padStart(2, '0');
-        dateInput.value = todayString;
-        
-        // Limpiar selector de categoría
-        categorySelect.innerHTML = '<option value="">Seleccionar categoría</option>';
-    });
-
-    // Hacer deleteTransaction disponible globalmente
-    window.deleteTransaction = deleteTransaction;
-
-    // Inicializar cuando se carga la página
-    document.addEventListener('DOMContentLoaded', function() {
-        renderTransactions();
-        calculateTotals();
-        createCharts();
-    });
-</script>
-```
-
-</body>
-</html>
